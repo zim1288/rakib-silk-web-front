@@ -1,0 +1,100 @@
+# ==============================================================================
+# Master .gitignore for Rakib Silk & Fashion Monorepo
+# Prevents accidental commits of secrets, dependencies, builds & OS files.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Confidential Secrets (CRITICAL)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+local.properties
+debug.keystore
+debug.keystore.base64
+*.pem
+*.key
+*.cert
+*.p12
+*.jks
+
+# Always allow template example files to be tracked
+!.env.example
+!*/.env.example
+
+# ------------------------------------------------------------------------------
+# 2. Dependency Directories
+# ------------------------------------------------------------------------------
+node_modules/
+*/node_modules/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+
+# ------------------------------------------------------------------------------
+# 3. Production Build Outputs & Artifacts
+# ------------------------------------------------------------------------------
+dist/
+*/dist/
+build/
+*/build/
+out/
+*/out/
+.next/
+.output/
+*.tsbuildinfo
+.artifacts/
+.build-outputs/
+
+# ------------------------------------------------------------------------------
+# 4. Logs, Traces & Caches
+# ------------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+.stylelintcache
+
+# ------------------------------------------------------------------------------
+# 5. IDE & Code Editor Files
+# ------------------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.sublime-project
+*.sublime-workspace
+.vs/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ------------------------------------------------------------------------------
+# 6. Operating System Artifacts
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------------------------
+# 7. Metadata & Tooling Artifacts
+# ------------------------------------------------------------------------------
+metadata.json
+*/metadata.json
+app-reference/
+.gemini/
+*.log

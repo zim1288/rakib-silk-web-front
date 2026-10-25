@@ -1,0 +1,23 @@
+{
+  "name": "rakib-silk-and-fashion-workspace",
+  "version": "1.0.0",
+  "description": "Fullstack monorepo for Rakib Silk & Fashion (Tally Khata) merchant management platform",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "lint:frontend": "npm run lint --prefix frontend"
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "express",
+    "mongodb",
+    "tally-khata",
+    "silk-and-fashion"
+  ],
+  "author": "Rakib Silk & Fashion",
+  "license": "ISC"
+}

@@ -1,0 +1,36 @@
+# Render Blueprint Infrastructure-as-Code
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: rakib-fashion-backend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DB_NAME
+        value: Silk_and_fashion
+      - key: MONGODB_URI
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: EMAILJS_SERVICE_ID
+        sync: false
+      - key: EMAILJS_TEMPLATE_ID
+        sync: false
+      - key: EMAILJS_USER_ID
+        sync: false
+      - key: EMAILJS_PRIVATE_KEY
+        sync: false

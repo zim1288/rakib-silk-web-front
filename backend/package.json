@@ -1,0 +1,35 @@
+{
+  "name": "rakib-silk-backend",
+  "version": "1.0.0",
+  "description": "Production REST API backend for Rakib Silk & Fashion (Tally Khata) merchant management system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "mongoose",
+    "cloudinary",
+    "inventory",
+    "tally-khata"
+  ],
+  "author": "Rakib Silk & Fashion",
+  "license": "ISC",
+  "dependencies": {
+    "cloudinary": "^1.41.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.3.2",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
