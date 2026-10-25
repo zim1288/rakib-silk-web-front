@@ -60,7 +60,7 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
         borderRadius: '12px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
         border: '1px solid #f0e6e0',
-        overflow: 'hidden',
+        overflowX: 'auto',
       }}
     >
       <table id="transactions-table" data-testid="transactions-table" className="data-table spacious-ledger-table">
