@@ -13,6 +13,11 @@ const { cloudinary } = require('../config/cloudinary');
  */
 function uploadImage(req, res) {
   try {
+    const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: 'No image provided' });
     }
@@ -30,6 +35,11 @@ function uploadImage(req, res) {
  */
 async function deleteImage(req, res, next) {
   try {
+    const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
+
     const { imageUrl } = req.body;
     if (!imageUrl) {
       return res.status(400).json({ error: 'No image URL provided' });

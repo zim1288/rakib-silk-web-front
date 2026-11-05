@@ -16,6 +16,9 @@ const UserLog = require('../models/UserLog');
 async function getProduction(req, res, next) {
   try {
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     const items = await UserLog.find({ dataType: 'production', email }, '-__v').lean();
     return res.status(200).json(items);
   } catch (err) {
@@ -35,6 +38,9 @@ async function bulkUpsertProduction(req, res, next) {
     }
 
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     const bulkOps = items.map((item) => ({
       updateOne: {
         filter: { id: item.id, dataType: 'production', email },
@@ -67,6 +73,9 @@ async function bulkUpsertProduction(req, res, next) {
 async function deleteProductionItem(req, res, next) {
   try {
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     const itemId = parseInt(req.params.id, 10);
 
     if (isNaN(itemId)) {

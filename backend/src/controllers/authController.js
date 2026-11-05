@@ -527,11 +527,19 @@ async function register(req, res, next) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const user = await User.findOneAndUpdate(
-      { email: normalizedEmail },
-      { email: normalizedEmail, password, tokenVersion: 1, isVerified: true },
-      { upsert: true, new: true }
-    );
+    // Guard against account takeover: do not overwrite existing accounts
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email is already registered. Please login.' });
+    }
+
+    const user = await User.create({
+      email: normalizedEmail,
+      password,
+      tokenVersion: 1,
+      isVerified: true,
+      passwordChangedAt: new Date(),
+    });
 
     return res.status(200).json({ status: 'ok', email: user.email, tokenVersion: user.tokenVersion });
   } catch (err) {

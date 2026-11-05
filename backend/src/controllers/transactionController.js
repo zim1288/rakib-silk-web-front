@@ -15,14 +15,12 @@ const UserLog = require('../models/UserLog');
 async function getTransactions(req, res, next) {
   try {
     const email = req.userEmail;
-    const filter = { dataType: 'transaction' };
 
-    // Apply tenant filter if present and non-anonymous
-    if (email && email !== 'anonymous') {
-      filter.email = email;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
     }
 
-    const logs = await UserLog.find(filter, '-__v').lean();
+    const logs = await UserLog.find({ dataType: 'transaction', email }, '-__v').lean();
     return res.status(200).json(logs);
   } catch (err) {
     next(err);
@@ -37,6 +35,10 @@ async function saveTransactions(req, res, next) {
   try {
     const payload = req.body;
     const email = req.userEmail;
+
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
 
     if (Array.isArray(payload)) {
       const bulkOps = payload.map((item) => ({

@@ -132,17 +132,3 @@ export function logAction(entry: {
   const updated = [newEntry, ...current];
   localStorage.setItem(key, JSON.stringify(updated));
 }
-
-/** Alias for {@link logAction} */
-export const recordAction = logAction;
-
-/**
- * Clears all audit history records for the specified merchant account.
- *
- * @param userEmail - Optional explicit merchant email address.
- */
-export function clearActionHistory(userEmail?: string | null): void {
-  const email = userEmail || sessionStorage.getItem('rakib_user_email') || 'system';
-  const key = `${STORAGE_KEY_PREFIX}${email}`;
-  localStorage.removeItem(key);
-}

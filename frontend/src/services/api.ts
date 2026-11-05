@@ -298,18 +298,6 @@ export async function saveTransaction(item: TransactionItem): Promise<any> {
   });
 }
 
-/**
- * Persists a bulk array of commercial transactions (e.g. multi-item cart purchases or sales).
- *
- * @param items - Array of transaction item details.
- */
-export async function saveBulkTransactions(items: TransactionItem[]): Promise<any> {
-  return request('/transactions', {
-    method: 'POST',
-    body: JSON.stringify(items),
-  });
-}
-
 /* ==========================================================================
    CUSTOMER PROFILE ENDPOINTS
    ========================================================================== */
@@ -366,22 +354,4 @@ export async function uploadImageFile(file: File): Promise<string> {
 
   const data = await response.json();
   return data.imageUrl;
-}
-
-/**
- * Requests deletion of a stored asset from the backend Cloudinary bucket.
- * Non-critical operation: fails gracefully without interrupting user workflow.
- *
- * @param imageUrl - Full URL of the image to remove.
- */
-export async function deleteCloudinaryImage(imageUrl: string): Promise<any> {
-  if (!imageUrl || (!imageUrl.includes('cloudinary') && !imageUrl.includes('tally-app'))) {
-    return;
-  }
-  return request('/delete-image', {
-    method: 'POST',
-    body: JSON.stringify({ imageUrl }),
-  }).catch(() => {
-    // Non-critical background cleanup
-  });
 }

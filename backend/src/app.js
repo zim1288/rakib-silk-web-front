@@ -21,11 +21,34 @@ const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 
-// Enable Cross-Origin Resource Sharing for all origins (web frontend, mobile, preview iframe)
+// Configured Cross-Origin Resource Sharing for verified web origins, mobile clients, and render deployments
+const allowedOrigins = [
+  'https://rakib-silk-web-front.onrender.com',
+  'https://rakib-fashion-backend.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+];
+if (process.env.CLIENT_ORIGIN) {
+  allowedOrigins.push(process.env.CLIENT_ORIGIN);
+}
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.onrender.com') ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS policy: Not allowed by CORS origin validation'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Email'],
+  credentials: true,
 }));
 
 // Parse JSON and URL-encoded bodies

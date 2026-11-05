@@ -17,6 +17,9 @@ const UserLog = require('../models/UserLog');
 async function getInventory(req, res, next) {
   try {
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     const items = await UserLog.find({ dataType: 'inventory', email }, '-__v').lean();
     return res.status(200).json(items);
   } catch (err) {
@@ -36,6 +39,9 @@ async function bulkUpsertInventory(req, res, next) {
     }
 
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     const bulkOps = items.map((item) => ({
       updateOne: {
         filter: { id: item.id, dataType: 'inventory', email },
@@ -73,6 +79,9 @@ async function saveInventoryItem(req, res, next) {
     }
 
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     await UserLog.findOneAndUpdate(
       { id: item.id, dataType: 'inventory', email },
       {
@@ -97,6 +106,9 @@ async function saveInventoryItem(req, res, next) {
 async function deleteInventoryItem(req, res, next) {
   try {
     const email = req.userEmail;
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
     const itemId = parseInt(req.params.id, 10);
 
     if (isNaN(itemId)) {
@@ -131,6 +143,10 @@ async function sellInventoryItemAtomic(req, res, next) {
   try {
     const { itemId, quantity, unitPrice, customerName, customerNumber, notes } = req.body;
     const email = req.userEmail;
+
+    if (!email || email === 'anonymous') {
+      return res.status(401).json({ error: 'Unauthorized: Valid X-User-Email header required' });
+    }
 
     if (!itemId || !quantity || quantity <= 0) {
       return res.status(400).json({ error: 'Valid numeric itemId and positive quantity are required' });

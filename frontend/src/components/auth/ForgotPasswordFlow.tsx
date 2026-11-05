@@ -13,13 +13,6 @@ import { createPortal } from 'react-dom';
 import { validateEmail, validatePassword } from '../../utils/validation';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { OtpVerificationView } from './OtpVerificationView';
-import {
-  generateOtp,
-  sendOtpEmail,
-  getOrDispatchOtp,
-  resendFreshOtp,
-  getStoredOtpSession,
-} from '../../services/emailService';
 import { BASE_URL } from '../../services/api';
 
 export interface ForgotPasswordFlowProps {
@@ -37,8 +30,7 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
-  // Secure memory storage for generated OTP
-  const [expectedOtp, setExpectedOtp] = useState<string | null>(null);
+  // Verified OTP code to pass forward to final reset step
   const [verifiedOtpCode, setVerifiedOtpCode] = useState<string>('');
   const [isOtpAlreadyActive, setIsOtpAlreadyActive] = useState(false);
 
@@ -61,55 +53,26 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
 
     setIsLoading(true);
     try {
-      // 1. Attempt smart password reset request via backend
-      try {
-        const backendRes = await fetch(`${BASE_URL}/auth/request-password-reset`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim().toLowerCase() }),
-        });
-
-        if (backendRes.status === 404) {
-          setGeneralError('No merchant account found with this email address.');
-          setIsLoading(false);
-          return;
-        }
-
-        if (backendRes.ok) {
-          const data = await backendRes.json();
-          setIsOtpAlreadyActive(Boolean(data.alreadySent));
-          setStep('verify');
-          setIsLoading(false);
-          return;
-        }
-      } catch (backendErr) {
-        console.warn('Backend request-password-reset unavailable, using client smart fallback...');
-      }
-
-      // 2. Fallback: check account existence via /auth/check
-      const checkRes = await fetch(`${BASE_URL}/auth/check`, {
+      const backendRes = await fetch(`${BASE_URL}/auth/request-password-reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
-      if (!checkRes.ok) {
+      if (backendRes.status === 404) {
         setGeneralError('No merchant account found with this email address.');
-        setIsLoading(false);
         return;
       }
 
-      // 3. Smart 30-minute OTP check / dispatch
-      const dispatchRes = await getOrDispatchOtp(email, 'Silk & Fashion password reset');
-      if (!dispatchRes.success) {
-        setGeneralError(dispatchRes.error || 'Failed to dispatch verification email. Please try again.');
-        setIsLoading(false);
+      if (backendRes.ok) {
+        const data = await backendRes.json();
+        setIsOtpAlreadyActive(Boolean(data.alreadySent));
+        setStep('verify');
         return;
       }
 
-      setExpectedOtp(dispatchRes.code);
-      setIsOtpAlreadyActive(dispatchRes.alreadyActive);
-      setStep('verify');
+      const data = await backendRes.json().catch(() => ({}));
+      setGeneralError(data.error || 'Failed to dispatch reset code. Please try again.');
     } catch (err: unknown) {
       setGeneralError('Connection error. Please check your network and try again.');
     } finally {
@@ -126,27 +89,17 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           purpose: 'password_reset',
-          code: enteredCode,
+          code: enteredCode.trim(),
         }),
       });
       if (res.ok) {
-        setVerifiedOtpCode(enteredCode);
+        setVerifiedOtpCode(enteredCode.trim());
         return true;
       }
+      return false;
     } catch (err) {
-      console.warn('Backend verify-otp unavailable, checking session...');
+      return false;
     }
-
-    const session = getStoredOtpSession(email, 'Silk & Fashion password reset');
-    if (session && session.code === enteredCode) {
-      setVerifiedOtpCode(enteredCode);
-      return true;
-    }
-    if (enteredCode === expectedOtp) {
-      setVerifiedOtpCode(enteredCode);
-      return true;
-    }
-    return false;
   };
 
   const handleOtpSuccess = () => {
@@ -165,16 +118,9 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
       });
       if (res.ok) {
         setIsOtpAlreadyActive(false);
-        return;
       }
     } catch (err) {
-      console.warn('Backend resend-otp unavailable, using client fallback...');
-    }
-
-    const resendRes = await resendFreshOtp(email, 'Silk & Fashion password reset');
-    if (resendRes.success) {
-      setExpectedOtp(resendRes.newCode);
-      setIsOtpAlreadyActive(false);
+      console.warn('Failed to resend reset OTP:', err);
     }
   };
 
@@ -196,49 +142,25 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
 
     setIsLoading(true);
     try {
-      // 1. Call backend complete-password-reset which increments tokenVersion in MongoDB
-      // and immediately invalidates any active sessions on all other phones / browsers.
-      try {
-        const resetRes = await fetch(`${BASE_URL}/auth/complete-password-reset`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim().toLowerCase(),
-            code: verifiedOtpCode || expectedOtp || '',
-            newPassword,
-          }),
-        });
-
-        if (resetRes.ok) {
-          sessionStorage.removeItem('rakib_user_email');
-          sessionStorage.removeItem('rakib_token_version');
-          setStep('success');
-          return;
-        }
-      } catch (backendErr) {
-        console.warn('Backend complete-password-reset unavailable, using fallback...');
-      }
-
-      // 2. Legacy fallback
-      const res = await fetch(`${BASE_URL}/auth/register`, {
+      const resetRes = await fetch(`${BASE_URL}/auth/complete-password-reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
-          password: newPassword,
+          code: verifiedOtpCode,
+          newPassword,
         }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        setGeneralError(errData.error || 'Failed to update password. Please try again.');
+      if (resetRes.ok) {
+        sessionStorage.removeItem('rakib_user_email');
+        sessionStorage.removeItem('rakib_token_version');
+        setStep('success');
         return;
       }
 
-      sessionStorage.removeItem('rakib_user_email');
-      sessionStorage.removeItem('rakib_token_version');
-      // Move to Step 4
-      setStep('success');
+      const errData = await resetRes.json().catch(() => ({}));
+      setGeneralError(errData.error || 'Failed to update password. Please check your verification code and try again.');
     } catch (err) {
       setGeneralError('Network error while updating password. Please try again.');
     } finally {

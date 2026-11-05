@@ -94,6 +94,16 @@ export const AuthSliderContainer: React.FC<AuthSliderContainerProps> = ({
     }
   };
 
+  const handleRegistrationSuccess = () => {
+    handleClearMessages();
+    setSuccessMessage('Email verified and account registered successfully! Switching to sign in...');
+    setTimeout(() => {
+      setIsActive(false);
+      window.history.replaceState(null, '', '/login');
+      setSuccessMessage('Account verified! Please sign in.');
+    }, 1200);
+  };
+
   const handleSubmitRegister = async (email: string, pass: string) => {
     setIsLoading(true);
     handleClearMessages();
@@ -132,6 +142,7 @@ export const AuthSliderContainer: React.FC<AuthSliderContainerProps> = ({
           errorMessage={errorMessage}
           successMessage={successMessage}
           onSubmitRegister={handleSubmitRegister}
+          onRegistrationSuccess={handleRegistrationSuccess}
           onClearMessages={handleClearMessages}
         />
 
