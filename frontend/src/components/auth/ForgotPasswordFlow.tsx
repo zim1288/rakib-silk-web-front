@@ -271,6 +271,11 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
                   setEmail(e.target.value);
                   if (emailError) setEmailError(validateEmail(e.target.value));
                 }}
+                onBlur={(e) => {
+                  if (e.target.value.trim()) {
+                    setEmailError(validateEmail(e.target.value));
+                  }
+                }}
                 disabled={isLoading}
                 required
               />

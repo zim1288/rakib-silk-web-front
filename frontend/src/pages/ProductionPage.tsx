@@ -47,6 +47,7 @@ export const ProductionPage: React.FC = () => {
   // Search, Filter, and Sort State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [brandFilter, setBrandFilter] = useState<'ALL' | 'Rakib Silk' | 'Rakib Fashion'>('ALL');
   const [sortField, setSortField] = useState<ProductionSortField>('id');
   const [sortOrder, setSortOrder] = useState<ProductionSortOrder>('desc');
 
@@ -54,6 +55,7 @@ export const ProductionPage: React.FC = () => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [modelName, setModelName] = useState('');
+  const [brandCategory, setBrandCategory] = useState<string>('Rakib Silk');
   const [quantity, setQuantity] = useState('');
   const [estimatedCompletionDate, setEstimatedCompletionDate] = useState('');
   const [status, setStatus] = useState<ProductionStatus>('Pending');
@@ -113,6 +115,7 @@ export const ProductionPage: React.FC = () => {
   const handleOpenAddForm = () => {
     setEditingId(null);
     setModelName('');
+    setBrandCategory(brandFilter === 'Rakib Fashion' ? 'Rakib Fashion' : 'Rakib Silk');
     setQuantity('');
     // Default deadline to +7 days
     const d = new Date();
@@ -132,6 +135,9 @@ export const ProductionPage: React.FC = () => {
   const handleStartEdit = (item: ProductionItem) => {
     setEditingId(item.id);
     setModelName(item.modelName || '');
+    const isFashion =
+      item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+    setBrandCategory(isFashion ? 'Rakib Fashion' : 'Rakib Silk');
     setQuantity(item.quantity ? String(item.quantity) : '');
     setEstimatedCompletionDate(item.estimatedCompletionDate || '');
     setStatus(item.status || 'Pending');
@@ -180,6 +186,7 @@ export const ProductionPage: React.FC = () => {
     const itemPayload: ProductionItem = {
       id: prodId,
       modelName: modelName.trim(),
+      brandCategory: brandCategory || 'Rakib Silk',
       quantity: Number(quantity),
       estimatedCompletionDate: estimatedCompletionDate,
       status: status,
@@ -268,10 +275,51 @@ export const ProductionPage: React.FC = () => {
   };
 
   /**
+   * Dedicated metric calculations for Rakib Silk vs. Rakib Fashion weaving orders
+   */
+  const silkBatches = useMemo(() => {
+    return items.filter(
+      (i) => i.brandCategory === 'Rakib Silk' || !i.brandCategory?.toLowerCase().includes('fashion')
+    );
+  }, [items]);
+
+  const fashionBatches = useMemo(() => {
+    return items.filter(
+      (i) => i.brandCategory === 'Rakib Fashion' || (i.brandCategory?.toLowerCase().includes('fashion'))
+    );
+  }, [items]);
+
+  const silkMetrics = useMemo(() => {
+    const count = silkBatches.length;
+    const pieces = silkBatches.reduce((sum, i) => sum + (i.quantity || 0), 0);
+    const activeOnLooms = silkBatches.filter((i) => i.status !== 'Completed').length;
+    return { count, pieces, activeOnLooms };
+  }, [silkBatches]);
+
+  const fashionMetrics = useMemo(() => {
+    const count = fashionBatches.length;
+    const pieces = fashionBatches.reduce((sum, i) => sum + (i.quantity || 0), 0);
+    const activeOnLooms = fashionBatches.filter((i) => i.status !== 'Completed').length;
+    return { count, pieces, activeOnLooms };
+  }, [fashionBatches]);
+
+  /**
    * Memoized filtered and sorted production order list.
    */
   const filteredAndSortedItems = useMemo(() => {
     let result = items.filter((item) => {
+      // 1. Department Filter
+      if (brandFilter === 'Rakib Silk') {
+        const isFashion =
+          item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+        if (isFashion) return false;
+      } else if (brandFilter === 'Rakib Fashion') {
+        const isFashion =
+          item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+        if (!isFashion) return false;
+      }
+
+      // 2. Search & Status Filter
       const matchesSearch =
         !searchQuery.trim() ||
         item.modelName.toLowerCase().includes(searchQuery.trim().toLowerCase());
@@ -297,7 +345,7 @@ export const ProductionPage: React.FC = () => {
     });
 
     return result;
-  }, [items, searchQuery, statusFilter, sortField, sortOrder]);
+  }, [items, searchQuery, statusFilter, brandFilter, sortField, sortOrder]);
 
   return (
     <div className="page-wrapper">
@@ -306,6 +354,65 @@ export const ProductionPage: React.FC = () => {
         onOpenAddForm={handleOpenAddForm}
         isLoading={isLoading}
       />
+
+      {/* Dual Department Production Metrics Grid */}
+      <div className="department-metrics-grid" style={{ marginTop: '1rem' }}>
+        <div
+          className={`department-metric-card silk-card ${brandFilter === 'Rakib Silk' ? 'card-selected' : ''}`}
+          onClick={() => setBrandFilter(brandFilter === 'Rakib Silk' ? 'ALL' : 'Rakib Silk')}
+          title="Click to filter weaving batches by Rakib Silk"
+        >
+          <div className="dept-header">
+            <span className="dept-badge pill-gold">✨ Rakib Silk Weaving</span>
+            <span className="dept-select-hint">
+              {brandFilter === 'Rakib Silk' ? 'Active Filter (Click to Reset)' : 'Click to filter'}
+            </span>
+          </div>
+          <div className="dept-stats">
+            <div className="dept-stat">
+              <span className="stat-label">Loom Batches:</span>
+              <span className="stat-value">{silkMetrics.count} batches</span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">Weaving Pieces:</span>
+              <span className="stat-value text-gold">{silkMetrics.pieces} pcs</span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">Active on Looms:</span>
+              <span className="stat-value">{silkMetrics.activeOnLooms} active</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={`department-metric-card fashion-card ${brandFilter === 'Rakib Fashion' ? 'card-selected' : ''}`}
+          onClick={() => setBrandFilter(brandFilter === 'Rakib Fashion' ? 'ALL' : 'Rakib Fashion')}
+          title="Click to filter weaving batches by Rakib Fashion"
+        >
+          <div className="dept-header">
+            <span className="dept-badge pill-burgundy">🏷️ Rakib Fashion Weaving</span>
+            <span className="dept-select-hint">
+              {brandFilter === 'Rakib Fashion' ? 'Active Filter (Click to Reset)' : 'Click to filter'}
+            </span>
+          </div>
+          <div className="dept-stats">
+            <div className="dept-stat">
+              <span className="stat-label">Loom Batches:</span>
+              <span className="stat-value">{fashionMetrics.count} batches</span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">Weaving Pieces:</span>
+              <span className="stat-value" style={{ color: 'var(--color-primary)' }}>
+                {fashionMetrics.pieces} pcs
+              </span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">Active on Looms:</span>
+              <span className="stat-value">{fashionMetrics.activeOnLooms} active</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {errorMessage && (
         <div id="error-msg" data-testid="error-msg" className="alert-box alert-error">
@@ -337,6 +444,8 @@ export const ProductionPage: React.FC = () => {
             setModelName(val);
             if (nameError) setNameError(validateModelName(val));
           }}
+          brandCategory={brandCategory}
+          onBrandCategoryChange={setBrandCategory}
           quantity={quantity}
           onQuantityChange={(val) => {
             setQuantity(val);
@@ -365,6 +474,11 @@ export const ProductionPage: React.FC = () => {
           onSearchChange={setSearchQuery}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          brandFilter={brandFilter}
+          onBrandFilterChange={setBrandFilter}
+          silkBatches={silkMetrics.count}
+          fashionBatches={fashionMetrics.count}
+          allBatches={items.length}
           totalCount={filteredAndSortedItems.length}
         />
 

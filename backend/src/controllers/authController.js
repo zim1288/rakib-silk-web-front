@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const PendingRegistration = require('../models/PendingRegistration');
 const OtpToken = require('../models/OtpToken');
+const { validateEmail } = require('../utils/validation');
 
 /**
  * Generates a cryptographically secure 6-digit numeric OTP code.
@@ -75,6 +76,11 @@ async function registerPending(req, res, next) {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      return res.status(400).json({ error: emailErr });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -202,6 +208,11 @@ async function requestPasswordResetOtp(req, res, next) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      return res.status(400).json({ error: emailErr });
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     // 1. Check if user exists in the primary User collection
@@ -257,6 +268,11 @@ async function resendOtp(req, res, next) {
     const { email, purpose } = req.body;
     if (!email || !purpose) {
       return res.status(400).json({ error: 'Email and purpose are required' });
+    }
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      return res.status(400).json({ error: emailErr });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -417,6 +433,11 @@ async function login(req, res, next) {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      return res.status(400).json({ error: emailErr });
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });
 
@@ -497,6 +518,11 @@ async function register(req, res, next) {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      return res.status(400).json({ error: emailErr });
     }
 
     const normalizedEmail = email.trim().toLowerCase();

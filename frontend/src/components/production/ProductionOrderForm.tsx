@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sparkles, Tag } from 'lucide-react';
 import { ProductionStatus } from '../../types';
 
 /**
@@ -10,6 +11,9 @@ export interface ProductionOrderFormProps {
   /** Saree model name */
   modelName: string;
   onModelNameChange: (val: string) => void;
+  /** Class brand department category */
+  brandCategory: string;
+  onBrandCategoryChange: (val: string) => void;
   /** Quantity of sarees in this weaving batch */
   quantity: string;
   onQuantityChange: (val: string) => void;
@@ -33,12 +37,14 @@ export interface ProductionOrderFormProps {
 
 /**
  * Form component for scheduling new loom runs or updating existing batch orders.
- * Includes inline validation for model names, positive piece counts, and deadline dates.
+ * Includes inline validation for model names, department line, positive piece counts, and deadline dates.
  */
 export const ProductionOrderForm: React.FC<ProductionOrderFormProps> = ({
   editingId,
   modelName,
   onModelNameChange,
+  brandCategory,
+  onBrandCategoryChange,
   quantity,
   onQuantityChange,
   estimatedCompletionDate,
@@ -85,6 +91,34 @@ export const ProductionOrderForm: React.FC<ProductionOrderFormProps> = ({
             )}
           </div>
 
+          {/* Department Line Toggle */}
+          <div className="form-group">
+            <label className="form-label">
+              Class Department Line <span className="required-mark">*</span>
+            </label>
+            <div className="brand-toggle-group">
+              <button
+                type="button"
+                className={`brand-toggle-btn ${brandCategory === 'Rakib Silk' || !brandCategory?.toLowerCase().includes('fashion') ? 'active-silk' : ''}`}
+                onClick={() => onBrandCategoryChange('Rakib Silk')}
+                disabled={isLoading}
+              >
+                <Sparkles size={14} />
+                <span>Rakib Silk</span>
+              </button>
+              <button
+                type="button"
+                className={`brand-toggle-btn ${brandCategory === 'Rakib Fashion' || brandCategory?.toLowerCase().includes('fashion') ? 'active-fashion' : ''}`}
+                onClick={() => onBrandCategoryChange('Rakib Fashion')}
+                disabled={isLoading}
+              >
+                <Tag size={14} />
+                <span>Rakib Fashion</span>
+              </button>
+            </div>
+            <small className="field-helper">Assigns loom run to Silk vs. Fashion inventory</small>
+          </div>
+
           <div className="form-group">
             <label htmlFor="prod-quantity-input" className="form-label">
               Quantity (pcs) <span className="required-mark">*</span>
@@ -98,9 +132,10 @@ export const ProductionOrderForm: React.FC<ProductionOrderFormProps> = ({
               value={quantity}
               onChange={(e) => onQuantityChange(e.target.value)}
               disabled={isLoading}
+              min="1"
               required
             />
-            <small className="field-helper">Whole number greater than 0</small>
+            <small className="field-helper">Positive integer required</small>
             {quantityError && (
               <span id="prod-quantity-error" className="field-error">
                 {quantityError}
@@ -122,7 +157,7 @@ export const ProductionOrderForm: React.FC<ProductionOrderFormProps> = ({
               disabled={isLoading}
               required
             />
-            <small className="field-helper">Target completion deadline</small>
+            <small className="field-helper">Required target delivery date</small>
             {dateError && (
               <span id="prod-date-error" className="field-error">
                 {dateError}
@@ -141,33 +176,28 @@ export const ProductionOrderForm: React.FC<ProductionOrderFormProps> = ({
               value={status}
               onChange={(e) => onStatusChange(e.target.value as ProductionStatus)}
               disabled={isLoading}
-              required
             >
               <option value="Pending">Pending</option>
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
             </select>
-            <small className="field-helper">Current stage in the loom</small>
+            <small className="field-helper">Current stage in the loom lifecycle</small>
           </div>
         </div>
 
         <div className="form-actions">
           <button
-            id="save-prod-btn"
-            data-testid="save-prod-btn"
+            id="prod-save-btn"
+            data-testid="prod-save-btn"
             type="submit"
             className="btn btn-primary"
             disabled={isLoading}
           >
-            {isLoading
-              ? 'Saving...'
-              : editingId !== null
-              ? 'Update Order'
-              : 'Submit Production Order'}
+            {isLoading ? 'Saving...' : editingId !== null ? 'Update Batch' : 'Queue Batch'}
           </button>
           <button
-            id="cancel-prod-btn"
-            data-testid="cancel-prod-btn"
+            id="prod-cancel-btn"
+            data-testid="prod-cancel-btn"
             type="button"
             className="btn btn-secondary"
             onClick={onCancel}

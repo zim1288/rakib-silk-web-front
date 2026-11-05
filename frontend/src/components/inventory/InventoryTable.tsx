@@ -167,7 +167,17 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                 </div>
               </td>
               <td className="cell-category">
-                <span className="badge badge-light">{item.brandCategory || 'Silk'}</span>
+                <span
+                  className={`brand-pill ${
+                    item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion')
+                      ? 'pill-burgundy'
+                      : 'pill-gold'
+                  }`}
+                >
+                  {item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion')
+                    ? '🏷️ Rakib Fashion'
+                    : '✨ Rakib Silk'}
+                </span>
               </td>
               <td className="cell-price">৳{item.unitPrice.toLocaleString()}</td>
               <td className="cell-count">

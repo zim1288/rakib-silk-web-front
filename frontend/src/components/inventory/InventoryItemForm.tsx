@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { Sparkles, Tag } from 'lucide-react';
 
 /**
  * Props contract for the InventoryItemForm component.
@@ -152,20 +153,30 @@ export const InventoryItemForm: React.FC<InventoryItemFormProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="item-category-input" className="form-label">
-              Brand / Category
+            <label className="form-label">
+              Class Brand Category <span className="required-mark">*</span>
             </label>
-            <input
-              id="item-category-input"
-              data-testid="item-category-input"
-              type="text"
-              className="form-input"
-              placeholder="e.g. Silk, Katan, Benarasi"
-              value={brandCategory}
-              onChange={(e) => onBrandCategoryChange(e.target.value)}
-              disabled={isLoading}
-            />
-            <small className="field-helper">Saree category or fabric weave</small>
+            <div className="brand-toggle-group">
+              <button
+                type="button"
+                className={`brand-toggle-btn ${brandCategory === 'Rakib Silk' || (!brandCategory?.toLowerCase().includes('fashion')) ? 'active-silk' : ''}`}
+                onClick={() => onBrandCategoryChange('Rakib Silk')}
+                disabled={isLoading}
+              >
+                <Sparkles size={14} />
+                <span>Rakib Silk</span>
+              </button>
+              <button
+                type="button"
+                className={`brand-toggle-btn ${brandCategory === 'Rakib Fashion' || brandCategory?.toLowerCase().includes('fashion') ? 'active-fashion' : ''}`}
+                onClick={() => onBrandCategoryChange('Rakib Fashion')}
+                disabled={isLoading}
+              >
+                <Tag size={14} />
+                <span>Rakib Fashion</span>
+              </button>
+            </div>
+            <small className="field-helper">Designates department line (Luxury Silk vs. Fashion/Cottons)</small>
           </div>
 
           <div className="form-group">

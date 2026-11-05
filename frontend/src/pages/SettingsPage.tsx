@@ -24,7 +24,7 @@ export const SettingsPage: React.FC = () => {
   const { userEmail, logout, apiLatency } = useAuth();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'exports' | 'backup'>('exports');
+  const [activeTab, setActiveTab] = useState<'exports' | 'backup'>('backup');
   const [isExporting, setIsExporting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -763,11 +763,30 @@ export const SettingsPage: React.FC = () => {
               <span>Dashboard</span>
             </button>
             <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">Settings &amp; Tools</span>
+            {activeTab === 'exports' ? (
+              <>
+                <button
+                  type="button"
+                  className="back-to-dashboard-btn"
+                  onClick={() => setActiveTab('backup')}
+                  title="Back to Settings & Tools"
+                >
+                  <span>Settings &amp; Tools</span>
+                </button>
+                <span className="breadcrumb-separator">/</span>
+                <span className="breadcrumb-current">Data Export Center</span>
+              </>
+            ) : (
+              <span className="breadcrumb-current">Settings &amp; Tools</span>
+            )}
           </div>
-          <h1 className="page-heading">Settings &amp; System Center</h1>
+          <h1 className="page-heading">
+            {activeTab === 'exports' ? 'Data Export Center' : 'Settings & System Center'}
+          </h1>
           <p className="page-description">
-            Export data spreadsheets, manage database backups, review cloud diagnostics, and configure testing tools.
+            {activeTab === 'exports'
+              ? 'Export spreadsheet reports (CSV/Excel) and printable PDF documents, or download complete JSON system archives.'
+              : 'Export data spreadsheets, manage database backups, review cloud diagnostics, and configure testing tools.'}
           </p>
         </div>
 
@@ -799,29 +818,21 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tabs Row */}
-      <div className="settings-tabs-nav">
-        <button
-          type="button"
-          className={`settings-tab-btn ${activeTab === 'exports' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('exports')}
-        >
-          <FileSpreadsheet size={16} />
-          <span>Data Export Center</span>
-        </button>
-        <button
-          type="button"
-          className={`settings-tab-btn ${activeTab === 'backup' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('backup')}
-        >
-          <Database size={16} />
-          <span>Database Backup &amp; Health</span>
-        </button>
-      </div>
-
       {/* Tab 1: Data Export Center (CSV & Excel) */}
       {activeTab === 'exports' && (
         <div className="data-export-center-card">
+          <div style={{ marginBottom: '1.25rem' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setActiveTab('backup')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, padding: '0.5rem 1rem' }}
+            >
+              <ArrowLeft size={16} />
+              <span>&larr; Back to Settings &amp; Tools</span>
+            </button>
+          </div>
+
           {/* Card Title & Icon */}
           <div className="export-center-header">
             <span className="export-center-icon">📥</span>
@@ -1052,40 +1063,73 @@ export const SettingsPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          <hr className="export-divider" />
+
+          {/* Section 6: Full System JSON Snapshot (Integrated Database Backup) */}
+          <div className="export-section">
+            <h3 className="export-section-heading">
+              Full System JSON Snapshot (Complete Database Backup)
+            </h3>
+            <p className="export-section-desc">
+              Creates a self-contained, offline JSON snapshot containing all saree models, active loom production
+              batches, tally ledger transactions, customer directory, and audit activity records. Keep this file safe for offline archiving and restoration.
+            </p>
+            <div className="export-actions-row">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleDownloadFullBackup}
+                disabled={isExporting}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Download size={16} />
+                <span>Download JSON Database Backup</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Tab 2: Database Backup & Cloud Health */}
       {activeTab === 'backup' && (
         <div className="settings-content-grid">
-          <div className="settings-action-card">
+          <div 
+            className="settings-action-card"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setActiveTab('exports')}
+            title="Click to open Data Export Center"
+          >
             <div className="action-card-header">
               <div className="header-icon-circle icon-sage">
-                <Database size={20} />
+                <FileSpreadsheet size={20} />
               </div>
               <div>
-                <h3 className="action-card-title">Full System JSON Snapshot</h3>
-                <span className="action-card-desc">Download a complete backup archive of your business database</span>
+                <h3 className="action-card-title">Data Export Center</h3>
+                <span className="action-card-desc">CSV, Excel, PDF &amp; Full System JSON Snapshots</span>
               </div>
             </div>
 
             <div className="action-card-body">
               <p className="card-info-text">
-                Creates an encrypted, self-contained JSON snapshot containing all saree models, active loom production
-                batches, tally ledger transactions, and audit activity records. Keep this file safe for offline archiving.
+                Centralized hub for all business reports and backups. Export inventory, transaction ledgers, audit trails, and client profiles to Excel/CSV and PDF, or download complete JSON database backups.
               </p>
             </div>
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleDownloadFullBackup}
-              disabled={isExporting}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <Download size={16} />
-              <span>Download JSON Database Backup</span>
-            </button>
+            <div style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('exports');
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <FileSpreadsheet size={16} />
+                <span>Open Data Export Center</span>
+              </button>
+            </div>
           </div>
 
           <div className="settings-action-card">

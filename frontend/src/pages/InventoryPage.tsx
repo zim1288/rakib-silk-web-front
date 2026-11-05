@@ -52,6 +52,7 @@ export const InventoryPage: React.FC = () => {
 
   // Search and Sort State
   const [searchQuery, setSearchQuery] = useState('');
+  const [brandFilter, setBrandFilter] = useState<'ALL' | 'Rakib Silk' | 'Rakib Fashion'>('ALL');
   const [sortField, setSortField] = useState<InventorySortField>('id');
   const [sortOrder, setSortOrder] = useState<InventorySortOrder>('desc');
 
@@ -135,7 +136,7 @@ export const InventoryPage: React.FC = () => {
   const handleOpenAddForm = () => {
     setEditingId(null);
     setModelName('');
-    setBrandCategory('');
+    setBrandCategory(brandFilter === 'Rakib Fashion' ? 'Rakib Fashion' : 'Rakib Silk');
     setUnitPrice('');
     setPieceCount('');
     setImageUrl('');
@@ -152,7 +153,8 @@ export const InventoryPage: React.FC = () => {
   const handleStartEdit = (item: InventoryItem) => {
     setEditingId(item.id);
     setModelName(item.modelName || '');
-    setBrandCategory(item.brandCategory || '');
+    const isFashion = item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+    setBrandCategory(isFashion ? 'Rakib Fashion' : 'Rakib Silk');
     setUnitPrice(item.unitPrice ? String(item.unitPrice) : '');
     setPieceCount(item.pieceCount ? String(item.pieceCount) : '');
     setImageUrl(item.imageUrl || '');
@@ -198,7 +200,7 @@ export const InventoryPage: React.FC = () => {
     const itemPayload: InventoryItem = {
       id: itemId,
       modelName: modelName.trim(),
-      brandCategory: brandCategory.trim() || 'General Silk',
+      brandCategory: brandCategory.trim() || 'Rakib Silk',
       unitPrice: Number(unitPrice),
       pieceCount: Number(pieceCount),
       imageUrl: imageUrl.trim() || '',
@@ -320,10 +322,51 @@ export const InventoryPage: React.FC = () => {
   };
 
   /**
+   * Dedicated metric calculations for Rakib Silk vs. Rakib Fashion
+   */
+  const silkItems = useMemo(() => {
+    return items.filter(
+      (i) => i.brandCategory === 'Rakib Silk' || !i.brandCategory?.toLowerCase().includes('fashion')
+    );
+  }, [items]);
+
+  const fashionItems = useMemo(() => {
+    return items.filter(
+      (i) => i.brandCategory === 'Rakib Fashion' || (i.brandCategory?.toLowerCase().includes('fashion'))
+    );
+  }, [items]);
+
+  const silkMetrics = useMemo(() => {
+    const count = silkItems.length;
+    const pieces = silkItems.reduce((sum, i) => sum + (i.pieceCount || 0), 0);
+    const valuation = silkItems.reduce((sum, i) => sum + (i.unitPrice * (i.pieceCount || 0)), 0);
+    return { count, pieces, valuation };
+  }, [silkItems]);
+
+  const fashionMetrics = useMemo(() => {
+    const count = fashionItems.length;
+    const pieces = fashionItems.reduce((sum, i) => sum + (i.pieceCount || 0), 0);
+    const valuation = fashionItems.reduce((sum, i) => sum + (i.unitPrice * (i.pieceCount || 0)), 0);
+    return { count, pieces, valuation };
+  }, [fashionItems]);
+
+  const totalPieces = silkMetrics.pieces + fashionMetrics.pieces;
+
+  /**
    * Memoized filtered and sorted inventory collection.
    */
   const filteredAndSortedItems = useMemo(() => {
     let result = items.filter((item) => {
+      // 1. Department filter
+      if (brandFilter === 'Rakib Silk') {
+        const isFashion = item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+        if (isFashion) return false;
+      } else if (brandFilter === 'Rakib Fashion') {
+        const isFashion = item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+        if (!isFashion) return false;
+      }
+
+      // 2. Search query filter
       if (!searchQuery.trim()) return true;
       return item.modelName.toLowerCase().includes(searchQuery.trim().toLowerCase());
     });
@@ -346,7 +389,7 @@ export const InventoryPage: React.FC = () => {
     });
 
     return result;
-  }, [items, searchQuery, sortField, sortOrder]);
+  }, [items, searchQuery, brandFilter, sortField, sortOrder]);
 
   return (
     <div className="page-wrapper">
@@ -357,6 +400,65 @@ export const InventoryPage: React.FC = () => {
         onOpenAddForm={handleOpenAddForm}
         isLoading={isLoading}
       />
+
+      {/* Dual Department Metrics Breakdown */}
+      <div className="department-metrics-grid" style={{ marginTop: '1rem' }}>
+        <div
+          className={`department-metric-card silk-card ${brandFilter === 'Rakib Silk' ? 'card-selected' : ''}`}
+          onClick={() => setBrandFilter(brandFilter === 'Rakib Silk' ? 'ALL' : 'Rakib Silk')}
+          title="Click to filter table by Rakib Silk"
+        >
+          <div className="dept-header">
+            <span className="dept-badge pill-gold">✨ Rakib Silk Department</span>
+            <span className="dept-select-hint">
+              {brandFilter === 'Rakib Silk' ? 'Active Filter (Click to Reset)' : 'Click to filter'}
+            </span>
+          </div>
+          <div className="dept-stats">
+            <div className="dept-stat">
+              <span className="stat-label">Catalog Models:</span>
+              <span className="stat-value">{silkMetrics.count} designs</span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">In-Stock Pieces:</span>
+              <span className="stat-value text-gold">{silkMetrics.pieces} pcs</span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">Stock Valuation:</span>
+              <span className="stat-value font-mono">৳{silkMetrics.valuation.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={`department-metric-card fashion-card ${brandFilter === 'Rakib Fashion' ? 'card-selected' : ''}`}
+          onClick={() => setBrandFilter(brandFilter === 'Rakib Fashion' ? 'ALL' : 'Rakib Fashion')}
+          title="Click to filter table by Rakib Fashion"
+        >
+          <div className="dept-header">
+            <span className="dept-badge pill-burgundy">🏷️ Rakib Fashion Department</span>
+            <span className="dept-select-hint">
+              {brandFilter === 'Rakib Fashion' ? 'Active Filter (Click to Reset)' : 'Click to filter'}
+            </span>
+          </div>
+          <div className="dept-stats">
+            <div className="dept-stat">
+              <span className="stat-label">Catalog Models:</span>
+              <span className="stat-value">{fashionMetrics.count} designs</span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">In-Stock Pieces:</span>
+              <span className="stat-value" style={{ color: 'var(--color-primary)' }}>
+                {fashionMetrics.pieces} pcs
+              </span>
+            </div>
+            <div className="dept-stat">
+              <span className="stat-label">Stock Valuation:</span>
+              <span className="stat-value font-mono">৳{fashionMetrics.valuation.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {errorMessage && (
         <div id="error-msg" data-testid="error-msg" className="alert-box alert-error">
@@ -418,6 +520,11 @@ export const InventoryPage: React.FC = () => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           totalCount={filteredAndSortedItems.length}
+          brandFilter={brandFilter}
+          onBrandFilterChange={setBrandFilter}
+          silkPieces={silkMetrics.pieces}
+          fashionPieces={fashionMetrics.pieces}
+          allPieces={totalPieces}
         />
 
         {/* Large Image Preview Card */}

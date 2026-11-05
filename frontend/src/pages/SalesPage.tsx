@@ -14,6 +14,7 @@ import {
   Receipt,
   RotateCcw,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -40,6 +41,7 @@ export const SalesPage: React.FC = () => {
   // Form State
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [sareeSearch, setSareeSearch] = useState('');
+  const [brandTab, setBrandTab] = useState<'ALL' | 'Rakib Silk' | 'Rakib Fashion'>('ALL');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [quantity, setQuantity] = useState('');
@@ -142,17 +144,28 @@ export const SalesPage: React.FC = () => {
     );
   }, [customerDirectory, customerName, customerNumber]);
 
-  // Sarees filtered for the dropdown selector
+  // Sarees filtered for the dropdown selector by department & search query
   const filteredSarees = useMemo(() => {
-    if (!sareeSearch.trim()) return inventory;
-    const q = sareeSearch.trim().toLowerCase();
-    return inventory.filter(
-      (item) =>
+    return inventory.filter((item) => {
+      // 1. Department Filter
+      if (brandTab === 'Rakib Silk') {
+        const isFashion = item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+        if (isFashion) return false;
+      } else if (brandTab === 'Rakib Fashion') {
+        const isFashion = item.brandCategory === 'Rakib Fashion' || item.brandCategory?.toLowerCase().includes('fashion');
+        if (!isFashion) return false;
+      }
+
+      // 2. Search Query Filter
+      if (!sareeSearch.trim()) return true;
+      const q = sareeSearch.trim().toLowerCase();
+      return (
         item.modelName.toLowerCase().includes(q) ||
         (item.brandCategory && item.brandCategory.toLowerCase().includes(q)) ||
         (item.sku && item.sku.toLowerCase().includes(q))
-    );
-  }, [inventory, sareeSearch]);
+      );
+    });
+  }, [inventory, sareeSearch, brandTab]);
 
   const handleSelectItem = (item: InventoryItem) => {
     setSelectedItemId(item.id);
@@ -276,7 +289,11 @@ export const SalesPage: React.FC = () => {
       setCompletedSale({
         invoiceId: `INV-${now.toString().slice(-6)}`,
         modelName: selectedItem.modelName,
-        brandCategory: selectedItem.brandCategory || 'Rakib Silk',
+        brandCategory:
+          selectedItem.brandCategory === 'Rakib Fashion' ||
+          selectedItem.brandCategory?.toLowerCase().includes('fashion')
+            ? 'Rakib Fashion'
+            : 'Rakib Silk',
         quantity: qtyNum,
         unitPrice: priceNum,
         totalAmount: totalSaleAmount,
@@ -374,6 +391,36 @@ export const SalesPage: React.FC = () => {
           </div>
 
           <form onSubmit={handleSubmitSale} className="sales-form">
+            {/* Two-Part Department Line Filter */}
+            <div className="form-group">
+              <label className="form-label">Class Department Line</label>
+              <div className="brand-toggle-group">
+                <button
+                  type="button"
+                  className={`brand-toggle-btn ${brandTab === 'ALL' ? 'active-silk' : ''}`}
+                  onClick={() => setBrandTab('ALL')}
+                >
+                  <span>All Sarees ({inventory.length})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`brand-toggle-btn ${brandTab === 'Rakib Silk' ? 'active-silk' : ''}`}
+                  onClick={() => setBrandTab('Rakib Silk')}
+                >
+                  <Sparkles size={14} />
+                  <span>Rakib Silk</span>
+                </button>
+                <button
+                  type="button"
+                  className={`brand-toggle-btn ${brandTab === 'Rakib Fashion' ? 'active-fashion' : ''}`}
+                  onClick={() => setBrandTab('Rakib Fashion')}
+                >
+                  <Tag size={14} />
+                  <span>Rakib Fashion</span>
+                </button>
+              </div>
+            </div>
+
             {/* Saree Catalog Dropdown Selector */}
             <div className="form-group">
               <label className="form-label">
@@ -391,7 +438,19 @@ export const SalesPage: React.FC = () => {
                     <div className="selected-saree-preview">
                       <span className="selected-saree-name">{selectedItem.modelName}</span>
                       <div className="selected-saree-meta">
-                        <span className="badge-category">{selectedItem.brandCategory || 'Rakib Silk'}</span>
+                        <span
+                          className={`brand-pill ${
+                            selectedItem.brandCategory === 'Rakib Fashion' ||
+                            selectedItem.brandCategory?.toLowerCase().includes('fashion')
+                              ? 'pill-burgundy'
+                              : 'pill-gold'
+                          }`}
+                        >
+                          {selectedItem.brandCategory === 'Rakib Fashion' ||
+                          selectedItem.brandCategory?.toLowerCase().includes('fashion')
+                            ? '🏷️ Rakib Fashion'
+                            : '✨ Rakib Silk'}
+                        </span>
                         <span className="stock-count-pill">
                           {selectedItem.pieceCount} pcs in hand
                         </span>
@@ -423,6 +482,9 @@ export const SalesPage: React.FC = () => {
                       ) : (
                         filteredSarees.map((item) => {
                           const isZero = (item.pieceCount || 0) <= 0;
+                          const isFashion =
+                            item.brandCategory === 'Rakib Fashion' ||
+                            item.brandCategory?.toLowerCase().includes('fashion');
                           return (
                             <div
                               key={item.id}
@@ -433,9 +495,16 @@ export const SalesPage: React.FC = () => {
                             >
                               <div className="option-info">
                                 <span className="option-title">{item.modelName}</span>
-                                <span className="option-sub">
-                                  {item.brandCategory || 'Rakib Silk'} {item.sku ? `• SKU: ${item.sku}` : ''}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                  <span className={`brand-pill ${isFashion ? 'pill-burgundy' : 'pill-gold'}`}>
+                                    {isFashion ? '🏷️ Rakib Fashion' : '✨ Rakib Silk'}
+                                  </span>
+                                  {item.sku ? (
+                                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                                      • SKU: {item.sku}
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
                               <div className="option-stock">
                                 <strong className="option-price">৳{item.unitPrice.toLocaleString('en-US')}</strong>
@@ -629,6 +698,21 @@ export const SalesPage: React.FC = () => {
 
                 <div className="preview-details">
                   <h3 className="preview-title">{selectedItem.modelName}</h3>
+                  <div style={{ marginTop: '0.25rem', marginBottom: '0.65rem' }}>
+                    <span
+                      className={`brand-pill ${
+                        selectedItem.brandCategory === 'Rakib Fashion' ||
+                        selectedItem.brandCategory?.toLowerCase().includes('fashion')
+                          ? 'pill-burgundy'
+                          : 'pill-gold'
+                      }`}
+                    >
+                      {selectedItem.brandCategory === 'Rakib Fashion' ||
+                      selectedItem.brandCategory?.toLowerCase().includes('fashion')
+                        ? '🏷️ Rakib Fashion'
+                        : '✨ Rakib Silk'}
+                    </span>
+                  </div>
                   <div className="preview-stats-list">
                     <div className="p-stat">
                       <span className="p-stat-title">Current In-Hand Stock:</span>

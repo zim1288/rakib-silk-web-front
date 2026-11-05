@@ -41,6 +41,7 @@ export interface ProductionItem {
   sku?: string;
   color?: string;
   fabricType?: string;
+  brandCategory?: string;
   quantity: number;
   estimatedCompletionDate: string;
   status: ProductionStatus;

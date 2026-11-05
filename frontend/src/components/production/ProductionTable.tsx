@@ -4,6 +4,7 @@ import { ProductionItem } from '../../types';
 export type ProductionSortField =
   | 'id'
   | 'modelName'
+  | 'brandCategory'
   | 'quantity'
   | 'estimatedCompletionDate'
   | 'status';
@@ -93,6 +94,14 @@ export const ProductionTable: React.FC<ProductionTableProps> = ({
               Model Name {sortField === 'modelName' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
             </th>
             <th
+              id="col-prod-brand"
+              data-testid="col-prod-brand"
+              onClick={() => onSort('brandCategory')}
+              className="sortable-header"
+            >
+              Department {sortField === 'brandCategory' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+            </th>
+            <th
               id="col-prod-quantity"
               data-testid="col-prod-quantity"
               onClick={() => onSort('quantity')}
@@ -130,6 +139,21 @@ export const ProductionTable: React.FC<ProductionTableProps> = ({
               <td className="cell-id">#{item.id}</td>
               <td className="cell-name">
                 <strong>{item.modelName}</strong>
+              </td>
+              <td className="cell-brand">
+                <span
+                  className={`brand-pill ${
+                    item.brandCategory === 'Rakib Fashion' ||
+                    item.brandCategory?.toLowerCase().includes('fashion')
+                      ? 'pill-burgundy'
+                      : 'pill-gold'
+                  }`}
+                >
+                  {item.brandCategory === 'Rakib Fashion' ||
+                  item.brandCategory?.toLowerCase().includes('fashion')
+                    ? '🏷️ Rakib Fashion'
+                    : '✨ Rakib Silk'}
+                </span>
               </td>
               <td className="cell-count">
                 <span className="badge badge-info">{item.quantity} pcs</span>
