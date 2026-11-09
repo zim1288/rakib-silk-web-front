@@ -13,8 +13,12 @@
 
 import { InventoryItem, ProductionItem, TransactionItem, AuthResponse } from '../types';
 
-/** Base URL for the production backend microservice (configurable via VITE_API_URL or defaults to live Render URL) */
-export const BASE_URL = (import.meta.env.VITE_API_URL as string) || 'https://rakib-fashion-backend.onrender.com/v1';
+/** Base URL for the production backend microservice (defaults to same-origin /v1 on Render or configurable via VITE_API_URL) */
+export const BASE_URL =
+  (import.meta.env.VITE_API_URL as string) ||
+  (typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes(':5173') && !window.location.origin.includes(':3000')
+    ? `${window.location.origin}/v1`
+    : 'https://rakib-fashion-backend.onrender.com/v1');
 
 let lastLatency = 0;
 const latencyListeners: Array<(latency: number) => void> = [];
