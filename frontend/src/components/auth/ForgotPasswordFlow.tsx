@@ -14,6 +14,11 @@ import { validateEmail, validatePassword } from '../../utils/validation';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { OtpVerificationView } from './OtpVerificationView';
 import { BASE_URL } from '../../services/api';
+import {
+  getOrDispatchOtp,
+  getStoredOtpSession,
+  resendFreshOtp,
+} from '../../services/emailService';
 
 export interface ForgotPasswordFlowProps {
   /** Callback to close the modal or return to login */
@@ -59,11 +64,6 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
-      if (backendRes.status === 404) {
-        setGeneralError('No merchant account found with this email address.');
-        return;
-      }
-
       if (backendRes.ok) {
         const data = await backendRes.json();
         setIsOtpAlreadyActive(Boolean(data.alreadySent));
@@ -71,9 +71,58 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
         return;
       }
 
+      const contentType = backendRes.headers.get('content-type') || '';
+      // If the backend returns a JSON 404, it means the merchant account genuinely doesn't exist
+      if (backendRes.status === 404 && contentType.includes('application/json')) {
+        const data = await backendRes.json().catch(() => ({}));
+        setGeneralError(data.error || 'No merchant account found with this email address.');
+        return;
+      }
+
+      // Legacy backend compatibility: If the backend does not have /auth/request-password-reset (HTML 404)
+      if (backendRes.status === 404) {
+        try {
+          const checkRes = await fetch(`${BASE_URL}/auth/check`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase() }),
+          });
+
+          if (!checkRes.ok) {
+            setGeneralError('No merchant account found with this email address.');
+            return;
+          }
+        } catch {
+          // Continue if check ping fails
+        }
+
+        const dispatchRes = await getOrDispatchOtp(email, 'Silk & Fashion password reset');
+        if (!dispatchRes.success) {
+          setGeneralError(dispatchRes.error || 'Failed to dispatch verification email. Please try again.');
+          return;
+        }
+
+        setVerifiedOtpCode(dispatchRes.code);
+        setIsOtpAlreadyActive(dispatchRes.alreadyActive);
+        setStep('verify');
+        return;
+      }
+
       const data = await backendRes.json().catch(() => ({}));
       setGeneralError(data.error || 'Failed to dispatch reset code. Please try again.');
     } catch (err: unknown) {
+      // Network failure: Attempt direct smart client dispatch fallback
+      try {
+        const dispatchRes = await getOrDispatchOtp(email, 'Silk & Fashion password reset');
+        if (dispatchRes.success) {
+          setVerifiedOtpCode(dispatchRes.code);
+          setIsOtpAlreadyActive(dispatchRes.alreadyActive);
+          setStep('verify');
+          return;
+        }
+      } catch {
+        // Fall through
+      }
       setGeneralError('Connection error. Please check your network and try again.');
     } finally {
       setIsLoading(false);
@@ -96,10 +145,19 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
         setVerifiedOtpCode(enteredCode.trim());
         return true;
       }
-      return false;
+      if (res.status === 400 || res.status === 401) {
+        return false;
+      }
     } catch (err) {
-      return false;
+      // Fall through to session check on network or 404
     }
+
+    const session = getStoredOtpSession(email, 'Silk & Fashion password reset');
+    if (session && session.code === enteredCode.trim()) {
+      setVerifiedOtpCode(enteredCode.trim());
+      return true;
+    }
+    return false;
   };
 
   const handleOtpSuccess = () => {
@@ -118,9 +176,16 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
       });
       if (res.ok) {
         setIsOtpAlreadyActive(false);
+        return;
       }
     } catch (err) {
-      console.warn('Failed to resend reset OTP:', err);
+      console.warn('Failed to resend backend reset OTP:', err);
+    }
+
+    const resendRes = await resendFreshOtp(email, 'Silk & Fashion password reset');
+    if (resendRes.success) {
+      setVerifiedOtpCode(resendRes.newCode);
+      setIsOtpAlreadyActive(false);
     }
   };
 
@@ -157,6 +222,25 @@ export const ForgotPasswordFlow: React.FC<ForgotPasswordFlowProps> = ({ onClose,
         sessionStorage.removeItem('rakib_token_version');
         setStep('success');
         return;
+      }
+
+      // Legacy backend compatibility: If complete-password-reset returns 404
+      if (resetRes.status === 404) {
+        const legacyRes = await fetch(`${BASE_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            password: newPassword,
+          }),
+        });
+
+        if (legacyRes.ok) {
+          sessionStorage.removeItem('rakib_user_email');
+          sessionStorage.removeItem('rakib_token_version');
+          setStep('success');
+          return;
+        }
       }
 
       const errData = await resetRes.json().catch(() => ({}));

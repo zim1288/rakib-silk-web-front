@@ -14,6 +14,11 @@ import { validateEmail, validatePassword } from '../../utils/validation';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { OtpVerificationView } from './OtpVerificationView';
 import { BASE_URL } from '../../services/api';
+import {
+  getOrDispatchOtp,
+  getStoredOtpSession,
+  resendFreshOtp,
+} from '../../services/emailService';
 
 export interface RegisterFormBoxProps {
   isLoading: boolean;
@@ -79,9 +84,49 @@ export const RegisterFormBox: React.FC<RegisterFormBoxProps> = ({
         return;
       }
 
+      // Legacy backend compatibility: If backend has not yet been upgraded with /auth/register-pending (returns 404)
+      if (backendRes.status === 404) {
+        try {
+          const checkRes = await fetch(`${BASE_URL}/auth/check`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase() }),
+          });
+          if (checkRes.ok) {
+            setSendError('Email is already registered. Please proceed to login.');
+            setIsSendingOtp(false);
+            return;
+          }
+        } catch {
+          // Continue if check ping fails
+        }
+
+        const dispatchRes = await getOrDispatchOtp(email, 'Silk & Fashion account verification');
+        if (!dispatchRes.success) {
+          setSendError(dispatchRes.error || 'Failed to dispatch verification code. Please check your network.');
+          setIsSendingOtp(false);
+          return;
+        }
+
+        setIsOtpAlreadyActive(dispatchRes.alreadyActive);
+        setShowOtpVerification(true);
+        return;
+      }
+
       const errData = await backendRes.json().catch(() => ({}));
       setSendError(errData.error || 'Failed to initiate registration. Please try again.');
     } catch (err) {
+      // Network failure: Attempt direct smart client dispatch fallback
+      try {
+        const dispatchRes = await getOrDispatchOtp(email, 'Silk & Fashion account verification');
+        if (dispatchRes.success) {
+          setIsOtpAlreadyActive(dispatchRes.alreadyActive);
+          setShowOtpVerification(true);
+          return;
+        }
+      } catch {
+        // Fall through
+      }
       setSendError('Unable to connect to server to send verification code. Please check your connection.');
     } finally {
       setIsSendingOtp(false);
@@ -217,17 +262,21 @@ export const RegisterFormBox: React.FC<RegisterFormBoxProps> = ({
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ email: email.trim().toLowerCase(), code: enteredCode.trim() }),
                     });
-                    return res.ok;
+                    if (res.ok) return true;
+                    if (res.status === 400 || res.status === 409) return false;
                   } catch (err) {
-                    return false;
+                    // Fall through to session check on network or 404
                   }
+
+                  const active = getStoredOtpSession(email, 'Silk & Fashion account verification');
+                  return Boolean(active && active.code === enteredCode.trim());
                 }}
                 onSuccess={async () => {
                   setShowOtpVerification(false);
-                  if (onRegistrationSuccess) {
-                    onRegistrationSuccess(email.trim());
-                  } else if (onSubmitRegister) {
+                  if (onSubmitRegister) {
                     await onSubmitRegister(email.trim(), password);
+                  } else if (onRegistrationSuccess) {
+                    onRegistrationSuccess(email.trim());
                   }
                 }}
                 onResend={async () => {
@@ -239,9 +288,15 @@ export const RegisterFormBox: React.FC<RegisterFormBoxProps> = ({
                     });
                     if (res.ok) {
                       setIsOtpAlreadyActive(false);
+                      return;
                     }
                   } catch (err) {
-                    console.warn('Failed to request OTP resend:', err);
+                    console.warn('Failed to request backend OTP resend:', err);
+                  }
+
+                  const resendRes = await resendFreshOtp(email, 'Silk & Fashion account verification');
+                  if (resendRes.success) {
+                    setIsOtpAlreadyActive(false);
                   }
                 }}
                 onBack={() => setShowOtpVerification(false)}
